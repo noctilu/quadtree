@@ -1,8 +1,6 @@
-checkoutLocation: "go/src/github.com/noctilu/quadtree"
+checkoutLocation: "quadtree"
 workspaceLocation: "."
 tasks:
   - command: >
-        cd /workspace/go/src/github.com/noctilu/quadtree &&
-	go get -v ./... &&
-	go build 
- 
+      cd quadtree &&
+      go build
