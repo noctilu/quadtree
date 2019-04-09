@@ -17,11 +17,12 @@ Table with first levels
 	4      [-8, 7] 			  16
 	5      [-16, 15]          32
 
- quadtree instances are immutable. Each change can return another instance. All instances are cached with their childs as hash value.
- Only two leaf nodes exist in memory: one life and one dead node.
 
- The hashlife algorithm is inspired by this article: http://www.drdobbs.com/jvm/an-algorithm-for-compressing-space-and-t/184406478
- Only the 'space compression' and no 'time compression' is implemented
+quadtree instances are immutable. Each change can return another instance. All instances are cached with their childs as hash value.
+Only two leaf nodes exist in memory: one life and one dead node.
+
+The hashlife algorithm is inspired by this article: http://www.drdobbs.com/jvm/an-algorithm-for-compressing-space-and-t/184406478
+Only the 'space compression' and no 'time compression' is implemented
 
 */
 package quadtree
