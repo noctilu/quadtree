@@ -1,19 +1,4 @@
-package quadtree
-
-import (
-	"fmt"
-	"log"
-	"runtime"
-	"sort"
-	"strings"
-	"sync"
-)
-
-// allows for easy change of dimension
-type Dim = int64
-
-/*
-Quadtree implementation
+/*Package quadtree implements a quadtree with Game of Life's hashlife algorithm. The quadtree divides space in the following 4 sub-quadtrees:
 
 	NW|NE
 	-----
@@ -25,13 +10,35 @@ Table with first levels
 
   level  x & y range  side edge Length
 	-------------------------------------
-	0      [0 , 0]					   1
+	0      [0 , 0]			   1
 	1      [-1, 0]             2
 	2      [-2, 1]             4
-	3      [-4, 3]						 8
-	4      [-8, 7] 						16
+	3      [-4, 3]			   8
+	4      [-8, 7] 			  16
 	5      [-16, 15]          32
+
+ quadtree instances are immutable. Each change can return another instance. All instances are cached with their childs as hash value.
+ Only two leaf nodes exist in memory: one life and one dead node.
+
+ The hashlife algorithm is inspired by this article: http://www.drdobbs.com/jvm/an-algorithm-for-compressing-space-and-t/184406478
+ Only the 'space compression' and no 'time compression' is implemented
+
 */
+package quadtree
+
+import (
+	"fmt"
+	"log"
+	"runtime"
+	"sort"
+	"strings"
+	"sync"
+)
+
+// Dim is the datatype use for the coordinates of the quadtree
+type Dim = int64
+
+// Childs contains all sub-quadtrees
 type Childs struct {
 	SE, SW, NW, NE *Quadtree
 }
@@ -40,6 +47,7 @@ func (ch *Childs) population() Dim {
 	return ch.SE.Population + ch.SW.Population + ch.NW.Population + ch.NE.Population
 }
 
+// Quadtree represents one node and consists itself of quadtrees
 type Quadtree struct {
 	Level      uint // distance from leaf layer.
 	Childs          //
@@ -52,12 +60,13 @@ var (
 	deadLeaf = &Quadtree{Population: 0}
 )
 
+// NodeMap is the cache for quadtrees.
 type NodeMap map[Childs]*Quadtree
 
 var (
-	nodeMap   NodeMap = make(NodeMap)
-	cacheHit  uint    = 0
-	cacheMiss uint    = 0
+	nodeMap   = make(NodeMap)
+	cacheHit  uint
+	cacheMiss uint
 )
 
 //NewTree returns a tree defined by its childs. Either an instance from cache or a new one using the supplied childs.
@@ -184,7 +193,7 @@ func (qt *Quadtree) findLeaf(x, y Dim) *Quadtree {
 	}
 }
 
-// findLifeCells finds all life cells of qt and calulcates their coordinates based
+// FindLifeCells finds all life cells of qt and calulcates their coordinates based
 // on the x and y values that denote the min x and min y of qt in the global coordinate system.
 // The root qt has its origin at - 2^(l-1)
 func (qt *Quadtree) FindLifeCells(x, y Dim, callback func(x, y Dim)) {
@@ -317,17 +326,19 @@ func oneGen(bitmask uint16) *Quadtree {
 	}
 }
 
-/**
- *   NextGeneration returns cached result from qt.next or recursivly computes the next generation.  It works
- *   by constructing nine subnodes that are each a quarter the size
- *   of the current node in each dimension, and combining these in
- *   groups of four, building subnodes from these, and then
- *   recursively invoking the NextGeneration function and combining
- *   those final results into a single return value that is one
- *   half the size of the current node and advanced one generation in
- *   time.
- *   qt.next will contain the result after the call
- */
+/*NextGeneration returns cached result from qt.next or recursivly computes the next generation.
+    It works
+    by constructing nine subnodes that are each a quarter the size
+    of the current node in each dimension, and combining these in
+    groups of four, building subnodes from these, and then
+    recursively invoking the NextGeneration function and combining
+    those final results into a single return value that is one
+    half the size of the current node and advanced one generation in
+    time.
+    qt.next will contain the result after the call
+
+	Check NextGen(), that keeps the tree level constant.
+*/
 func (qt *Quadtree) NextGeneration() *Quadtree {
 	if qt.next != nil {
 		return qt.next
@@ -386,6 +397,7 @@ func (b *buckets) sortedKeys() []int {
 	return keys
 }
 
+// Stats about the quadtree and its cache
 func (qt *Quadtree) Stats() string {
 	mutex.Lock()
 	defer mutex.Unlock()
@@ -415,6 +427,7 @@ func (qt *Quadtree) String() string {
 	return fmt.Sprintf("(L: %v)\n%vSE: %v\n%vSW: %v\n%vNW: %v\n%vNE: %v", qt.Level, spaces, qt.SE, spaces, qt.SW, spaces, qt.NW, spaces, qt.NE)
 }
 
+// Print to console a tree representation, only for small trees suitable
 func (qt *Quadtree) Print() {
 	maxCoord := Dim(1) << (qt.Level - 1)
 	for y := -maxCoord; y < maxCoord; y++ {
