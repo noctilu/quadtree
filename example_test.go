@@ -18,5 +18,4 @@ func Example() {
 	qtNext := qt.NextGen()
 
 	qtNext.Print()
-	//output: as
 }
